@@ -2,7 +2,7 @@
 
 import rospy
 import bluetooth
-
+from std_msgs.msg import Int32
 
 def find_device(faddr):
 	found = 0;
@@ -57,15 +57,20 @@ def call_service(uuid, addr):
 
 	return sock 
 
+def sender_cmd_cb(data):
+	cmd = data.data
 
 if __name__ == '__main__':
+	global cmd
+	cmd = 0
 	rospy.init_node('bt_sender')
+	rospy.Subscriber("sender_cmd", Int32, sender_cmd_cb)
 	faddr = "24:4C:E3:63:1B:CA"
 	uuid = "94f39d29-7d6d-437d-973b-fba39e49d4ee"
 	rate = 1/4.0
 	Rate = rospy.Rate(rate)
 	
-	msg_array = ["11001001","11001002"]
+	msg_array = ["11001003"]
 	#msg_array = ["0","1","2"]
 	find_device(faddr)
 	rospy.sleep(5)
@@ -79,12 +84,17 @@ if __name__ == '__main__':
 		data = sock.recv(1024)
 		rospy.loginfo("data recv: {}".format(data))
 		if data == '0':
-			rospy.loginfo("begin to send msg")
+			rospy.loginfo("begin to wait for cmd")
 			break		
 		Rate.sleep()
-
-	rospy.sleep(5)
-
+	
+	while not rospy.is_shutdown():
+		rospy.loginfo("cmd received is {}".format(cmd))
+		if cmd is 1:
+			break
+		rospy.sleep(1)
+		
+	rospy.loginfo("begin to send msg")
 	for msg in msg_array:
 		sock.send(msg)
 		rospy.loginfo("msg sent: {}".format(msg))
